@@ -14,3 +14,10 @@ Once you adapted the data to the folders system, you'll only have to run Train.p
 # Test
 The repository stores a DPDnet trained model, it is only a demo model to provide a demonstration, so it won't report the optimal results of the system.
 To test the only step needed its to run Test.py, and the system will load the demo sequence to show the results obtained with the proposed system.
+# Citation
+
+If you make use of this code and/or its related documentation, you are kindly requested to cite the paper:
+
+David Fuentes-Jimenez, Roberto Martin-Lopez, Cristina Losada-Gutierrez, David Casillas-Perez, Javier Macias-Guarasa, Carlos A. Luna, Daniel Pizarro. DPDnet: A Robust People Detector using Deep Learning with an Overhead Depth Camera, Expert Systems with Applications, 2019, 113168, ISSN 0957-4174
+    https://doi.org/10.1016/j.eswa.2019.113168.
+    (http://www.sciencedirect.com/science/article/pii/S0957417419308851)
