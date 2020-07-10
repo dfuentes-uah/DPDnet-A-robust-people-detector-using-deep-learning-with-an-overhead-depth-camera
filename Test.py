@@ -30,6 +30,9 @@ from tensorflow.keras.models import Sequential, load_model,Model
 from scipy import *
 import os
 
+#VERSION=0# FULL DPDNET
+VERSION=1# FAST VERSION
+
 relacion_aspecto=424/512
 img_x=256
 img_y=round(relacion_aspecto*img_x)
@@ -173,7 +176,28 @@ def refunit(divider,ch):
     modelo = Model(inputs=image_input, outputs=x)
     modelo.summary()
     return modelo
+def fastrefunit(divider,ch):
 
+    image_input = Input(shape=(int(img_y/divider), int(img_x/divider), ch))
+    x = Conv2D(64, (7, 7), strides=(2, 2), padding='same', name='conv1')(image_input)
+    x = BatchNormalization(axis=3, name='bn_conv1')(x)
+    x = Activation('relu')(x)
+    x = MaxPooling2D((3, 3))(x)
+
+    x = encoding_conv_block(x, 3, [64, 64, 256], stage=2, block='a', strides=(1, 1))
+    x = encoding_conv_block(x, 3, [128, 128, 512], stage=3, block='a')
+
+    x = decoding_conv_block(x, 3, [512, 512, 128], stage=6, block='a')
+
+    x = decoding_conv_block(x, 3, [256, 256, 64], stage=7, block='a')
+
+    x = UpSampling2D(size=(3, 3))(x)
+    x = Cropping2D(cropping=((1, 1), (2, 2)), data_format=None)(x)
+    x = Conv2DTranspose(1, (3, 3), padding='same', name='c8o')(x)
+    x = Activation('sigmoid')(x)
+    modelo = Model(inputs=image_input, outputs=x)
+    modelo.summary()
+    return modelo
 
 def test(divider,canales):
     valinput=[]
@@ -201,66 +225,133 @@ def test(divider,canales):
     valoutput=np.array(valoutput)
     return valinput,valoutput
 
-divider = 1
-canales = 1
 
-image_input = Input(shape=(int(img_y / divider), int(img_x / divider), 1))
-x = Conv2D(64, (7, 7), strides=(2, 2), padding='same', name='conv1')(image_input)
-x = BatchNormalization(axis=3, name='bn_conv1')(x)
-x = Activation('relu')(x)
-x = MaxPooling2D((3, 3))(x)
+if(VERSION==0):
+	divider = 1
+	canales = 1
 
-x = encoding_conv_block(x, 3, [64, 64, 256], stage=2, block='a', strides=(1, 1))
+	image_input = Input(shape=(int(img_y / divider), int(img_x / divider), 1))
+	x = Conv2D(64, (7, 7), strides=(2, 2), padding='same', name='conv1')(image_input)
+	x = BatchNormalization(axis=3, name='bn_conv1')(x)
+	x = Activation('relu')(x)
+	x = MaxPooling2D((3, 3))(x)
 
-x = encoding_conv_block(x, 3, [128, 128, 512], stage=3, block='a')
+	x = encoding_conv_block(x, 3, [64, 64, 256], stage=2, block='a', strides=(1, 1))
 
-x = encoding_conv_block(x, 3, [256, 256, 1024], stage=4, block='a')
+	x = encoding_conv_block(x, 3, [128, 128, 512], stage=3, block='a')
 
-x = decoding_conv_block(x, 3, [1024, 1024, 256], stage=5, block='a', strides=(1, 1))
+	x = encoding_conv_block(x, 3, [256, 256, 1024], stage=4, block='a')
 
-x = decoding_conv_block(x, 3, [512, 512, 128], stage=6, block='a')
+	x = decoding_conv_block(x, 3, [1024, 1024, 256], stage=5, block='a', strides=(1, 1))
 
-x = decoding_conv_block(x, 3, [256, 256, 64], stage=7, block='a')
-x = Cropping2D(cropping=((0, 0), (0, 1)), data_format=None)(x)
+	x = decoding_conv_block(x, 3, [512, 512, 128], stage=6, block='a')
 
-x = UpSampling2D(size=(3, 3))(x)
-x = Conv2DTranspose(64, (7, 7), strides=(2, 2), padding='same', name='co')(x)
-x = Cropping2D(cropping=((2, 2), (1, 1)), data_format=None)(x)
-x = BatchNormalization(axis=3, name='bn_c1')(x)
-x = Activation('relu')(x)
-x = Conv2DTranspose(1, (3, 3), padding='same', name='c8o')(x)
-x = Activation('sigmoid')(x)
-x2=tensorflow.keras.backend.concatenate([x,image_input],axis=-1)
-refinement1 = refunit(divider, canales + 1)
-x2 = refinement1(x2)
-model = Model(inputs=image_input, outputs=[x2])
-model.summary()
-model.load_weights('DPDnet.h5')
+	x = decoding_conv_block(x, 3, [256, 256, 64], stage=7, block='a')
+	x = Cropping2D(cropping=((0, 0), (0, 1)), data_format=None)(x)
 
-
-
-[valinput, valoutput] = test(divider,canales)
-cv.namedWindow('prediction', cv.WINDOW_NORMAL)
-cv.namedWindow('input', cv.WINDOW_NORMAL)
-cv.namedWindow('output', cv.WINDOW_NORMAL)
+	x = UpSampling2D(size=(3, 3))(x)
+	x = Conv2DTranspose(64, (7, 7), strides=(2, 2), padding='same', name='co')(x)
+	x = Cropping2D(cropping=((2, 2), (1, 1)), data_format=None)(x)
+	x = BatchNormalization(axis=3, name='bn_c1')(x)
+	x = Activation('relu')(x)
+	x = Conv2DTranspose(1, (3, 3), padding='same', name='c8o')(x)
+	x = Activation('sigmoid')(x)
+	x2=tensorflow.keras.backend.concatenate([x,image_input],axis=-1)
+	refinement1 = refunit(divider, canales + 1)
+	x2 = refinement1(x2)
+	model = Model(inputs=image_input, outputs=[x2])
+	model.summary()
+	model.load_weights('DPDnet.h5')
 
 
 
-for j in range(1,len(valinput[:,0,0,0]),1):
-        thresh=0.3
-        predicted=model.predict(valinput[j-1:j,:,:,:], verbose=0,batch_size=1)
+	[valinput, valoutput] = test(divider,canales)
+	cv.namedWindow('prediction', cv.WINDOW_NORMAL)
+	cv.namedWindow('input', cv.WINDOW_NORMAL)
+	cv.namedWindow('output', cv.WINDOW_NORMAL)
 
-        predicted=predicted/np.max(predicted)
-        predicted=predicted+(-np.min(predicted))
-        #predicted[predicted>thresh]=1
-        #predicted[predicted <= thresh] = 0
 
-        cv.imshow('input', valinput[j-1,:,:,0])
-        predicted=to_rgb3(predicted[0,:,:,:])
-        cv.imshow('prediction',predicted)
-        predicted=to_rgb3(valoutput[j-1,:,:,:])
-        cv.imshow('output',predicted)
-        cv.waitKey(1)
+
+	for j in range(1,len(valinput[:,0,0,0]),1):
+			thresh=0.3
+			predicted=model.predict(valinput[j-1:j,:,:,:], verbose=0,batch_size=1)
+
+			predicted=predicted/np.max(predicted)
+			predicted=predicted+(-np.min(predicted))
+			#predicted[predicted>thresh]=1
+			#predicted[predicted <= thresh] = 0
+
+			cv.imshow('input', valinput[j-1,:,:,0])
+			predicted=to_rgb3(predicted[0,:,:,:])
+			cv.imshow('prediction',predicted)
+			predicted=to_rgb3(valoutput[j-1,:,:,:])
+			cv.imshow('output',predicted)
+			cv.waitKey(1)
+
+
+
+
+if (VERSION == 1):
+	divider = 2
+	canales = 1
+	image_input = Input(shape=(int(img_y / divider), int(img_x / divider), 1))
+	x = Conv2D(64, (7, 7), strides=(2, 2), padding='same', name='conv1')(image_input)
+	x = BatchNormalization(axis=3, name='bn_conv1')(x)
+	x = Activation('relu')(x)
+	x = MaxPooling2D((3, 3))(x)
+
+	x = encoding_conv_block(x, 3, [64, 64, 256], stage=2, block='a', strides=(1, 1))
+
+	x = encoding_conv_block(x, 3, [128, 128, 512], stage=3, block='a')
+
+	x = encoding_conv_block(x, 3, [256, 256, 1024], stage=4, block='a')
+
+	x = decoding_conv_block(x, 3, [1024, 1024, 256], stage=5, block='a', strides=(1, 1))
+
+	x = decoding_conv_block(x, 3, [512, 512, 128], stage=6, block='a')
+
+	x = decoding_conv_block(x, 3, [256, 256, 64], stage=7, block='a')
+	x = Cropping2D(cropping=((1, 1), (1, 1)), data_format=None)(x)
+
+	x = UpSampling2D(size=(3, 3))(x)
+	x = Conv2DTranspose(64, (7, 7), strides=(2, 2), padding='same', name='co')(x)
+	x = Cropping2D(cropping=((1, 1), (1, 2)), data_format=None)(x)
+	x = BatchNormalization(axis=3, name='bn_c1')(x)
+	x = Activation('relu')(x)
+	x = Conv2DTranspose(1, (3, 3), padding='same', name='c8o')(x)
+	x = Cropping2D(cropping=((0, 0), (1, 0)), data_format=None)(x)
+	x = Activation('sigmoid')(x)
+	x2=tensorflow.keras.backend.concatenate([x,image_input],axis=-1)
+	refinement1 = fastrefunit(divider, canales + 1)
+	x2 = refinement1(x2)
+	model = Model(inputs=image_input, outputs=[x2])
+	model.summary()
+
+	model.compile(optimizer=tensorflow.keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, decay=0.0),loss=['mse'])
+	model.load_weights('DPDnet_fast.h5')
+
+	[valinput, valoutput] = test(divider, canales)
+	cv.namedWindow('prediction', cv.WINDOW_NORMAL)
+	cv.namedWindow('input', cv.WINDOW_NORMAL)
+	cv.namedWindow('output', cv.WINDOW_NORMAL)
+
+	for j in range(1, len(valinput[:, 0, 0, 0]), 1):
+		thresh = 0.3
+		predicted = model.predict(valinput[j - 1:j, :, :, :], verbose=0, batch_size=1)
+
+		predicted = predicted / np.max(predicted)
+		predicted = predicted + (-np.min(predicted))
+		# predicted[predicted>thresh]=1
+		# predicted[predicted <= thresh] = 0
+
+		cv.imshow('input', valinput[j - 1, :, :, 0])
+		predicted = to_rgb3(predicted[0, :, :, :])
+		cv.imshow('prediction', predicted)
+		predicted = to_rgb3(valoutput[j - 1, :, :, :])
+		cv.imshow('output', predicted)
+		cv.waitKey(1)
+
+
 
 
 
