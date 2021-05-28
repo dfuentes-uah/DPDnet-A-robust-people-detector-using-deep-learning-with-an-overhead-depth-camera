@@ -8,7 +8,7 @@ To train the system it is necessary to download the GOTPD database from the foll
 
 https://www.kaggle.com/lehomme/overhead-depth-images-people-detection-gotpd1
 
-The Data have to be stored in GOTPD_DATABASE folder and divided in gaussianas, imagenes and validacion folders, where we have the training set output images, the training set input images and the validation and test subsets, dividid in another gaussianas and imagenes subfolders.
+The Data have to be stored in GOTPD_DATABASE folder and divided in gaussianas, imagenes and validation folders, where we have the training set output images, the training set input images and the validation and test subsets, dividid in another gaussianas and imagenes subfolders.
 
 Once you adapted the data to the folders system, you'll only have to run Train.py and the system will train and save the trained model in DPDnet.h5 (it only save the weights).
 
