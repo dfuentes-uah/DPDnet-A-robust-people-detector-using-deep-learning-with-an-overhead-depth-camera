@@ -255,6 +255,38 @@ def TrainGen(divider,canales,batch_size,lengthdataset,path,img_y,img_x):
         counter = counter + 1
         yield X,[Y,Y]
 
+def to_rgb3(im):
+    # we can use dstack and an array copy
+    # this has to be slow, we create an array with
+    # 3x the data we need and truncate afterwards
+    im=im*(255/np.max(im))
+    return np.asarray(np.dstack((im, im, im)), dtype=np.uint8)
+def test(divider,canales,path,img_x,img_y):
+    valinput=[]
+    valoutput=[]
+    multiplier=6
+    counter=0
+    valinput = []
+    valoutput=  []
+    for j in range(1,741,1):
+         img_path = path+"validation/imagenes/seq-P01-M04-A0002-G00-C00-S0101/image%04d.png" % (j)
+         imgc = imageio.imread(img_path)
+         imgc = cv.resize(imgc, (int(img_x / divider), int(img_y / divider)))
+         xc = image.img_to_array(imgc)
+         xc = xc / 65536
+         valinput.append(xc)
+
+         img_path = path+"validation/gaussianas/seq-P01-M04-A0002-G00-C00-S0101/image%04d.png" % (j)
+         imgc = image.load_img(img_path, grayscale=True, target_size=(int(img_y/divider), int(img_x/divider), 1))
+         xc = image.img_to_array(imgc)
+         xc = cv.blur(xc, (3, 3))
+         xc = np.expand_dims(xc, axis=2)
+         xc = xc / 255
+         valoutput.append(xc)
+    valinput=np.array(valinput)
+    valoutput=np.array(valoutput)
+    return valinput,valoutput
+
 
 
 
